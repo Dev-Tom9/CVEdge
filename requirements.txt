@@ -1,5 +1,4 @@
-flask
+streamlit
 openai
 python-dotenv
 reportlab
-gunicorn
