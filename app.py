@@ -1,64 +1,117 @@
+import streamlit as st
 import os
-from flask import Flask, render_template, request, send_file
 from openai import OpenAI
 from dotenv import load_dotenv
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
 from io import BytesIO
+from datetime import datetime
 
 load_dotenv()
 
-app = Flask(__name__)
+# Initialize OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+st.set_page_config(
+    page_title="CVEdge - AI Resume Optimizer",
+    page_icon="📄",
+    layout="wide"
+)
 
-@app.route("/", methods=["GET", "POST"])
-def home():
-    optimized_text = ""
+# Custom Blue SaaS Styling
+st.markdown("""
+    <style>
+        .main {
+            background-color: #f4f8ff;
+        }
+        h1 {
+            color: #1e40af;
+        }
+        .stButton>button {
+            background-color: #2563eb;
+            color: white;
+            border-radius: 8px;
+            height: 3em;
+            width: 100%;
+        }
+        .stDownloadButton>button {
+            background-color: #10b981;
+            color: white;
+            border-radius: 8px;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 14px;
+            color: gray;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-    if request.method == "POST":
-        resume_text = request.form["resume"]
+# Hero Section
+st.title("Upgrade Your Resume With AI Precision")
+st.write("Instant ATS optimization. Stronger impact. More interviews.")
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a professional resume optimizer. Improve resumes for ATS, clarity, impact, and measurable achievements."},
-                {"role": "user", "content": resume_text}
-            ]
-        )
+st.divider()
 
-        optimized_text = response.choices[0].message.content
+resume_input = st.text_area(
+    "Paste Your Resume Below",
+    height=250,
+    placeholder="Paste your resume here..."
+)
 
-    return render_template("index.html", optimized_text=optimized_text)
+if st.button("Optimize Resume"):
+    if resume_input.strip() == "":
+        st.warning("Please paste your resume first.")
+    else:
+        with st.spinner("Optimizing your resume..."):
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a professional resume optimizer. Improve resumes for ATS, clarity, measurable impact and structure."},
+                    {"role": "user", "content": resume_input}
+                ]
+            )
 
+            optimized_text = response.choices[0].message.content
 
-@app.route("/download", methods=["POST"])
-def download_pdf():
-    content = request.form["optimized"]
+            st.success("Resume Optimized Successfully!")
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
+            st.subheader("Optimized Resume")
+            st.text_area("", optimized_text, height=300)
 
-    style = styles["Normal"]
-    style.fontSize = 11
-    style.leading = 14
+            # Generate PDF
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4)
+            styles = getSampleStyleSheet()
+            elements = []
 
-    for line in content.split("\n"):
-        elements.append(Paragraph(line, style))
-        elements.append(Spacer(1, 0.2 * inch))
+            for line in optimized_text.split("\n"):
+                elements.append(Paragraph(line, styles["Normal"]))
+                elements.append(Spacer(1, 0.2 * inch))
 
-    doc.build(elements)
-    buffer.seek(0)
+            doc.build(elements)
+            buffer.seek(0)
 
-    return send_file(buffer, as_attachment=True, download_name="CVEdge_Optimized_Resume.pdf", mimetype="application/pdf")
+            st.download_button(
+                label="Download Optimized Resume (PDF)",
+                data=buffer,
+                file_name="CVEdge_Optimized_Resume.pdf",
+                mime="application/pdf"
+            )
 
+st.divider()
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# Footer
+current_year = datetime.now().year
+st.markdown(
+    f"""
+    <footer>
+        © {current_year} CVEdge. All rights reserved.<br>
+        Built with ❤️ using Streamlit + OpenAI
+    </footer>
+    """,
+    unsafe_allow_html=True
+)
