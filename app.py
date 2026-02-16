@@ -9,162 +9,142 @@ from io import BytesIO
 from datetime import datetime
 import random
 
-# ----------------------------
-# API KEY HANDLING
-# ----------------------------
-api_key = None
-
-if "OPENAI_API_KEY" in st.secrets:
-    api_key = st.secrets["OPENAI_API_KEY"]
-elif os.getenv("OPENAI_API_KEY"):
-    api_key = os.getenv("OPENAI_API_KEY")
-
+# ------------------ API KEY ------------------
+api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 if not api_key:
-    st.error("OpenAI API Key not found. Add it in Streamlit Secrets.")
+    st.error("Missing OpenAI API key.")
     st.stop()
 
 client = OpenAI(api_key=api_key)
 
-# ----------------------------
-# PAGE CONFIG
-# ----------------------------
+# ------------------ PAGE CONFIG ------------------
 st.set_page_config(
-    page_title="CVEdge - AI Resume Optimizer",
+    page_title="CVEdge",
     page_icon="🚀",
     layout="wide"
 )
 
-# ----------------------------
-# PREMIUM SAAS CSS
-# ----------------------------
+# ------------------ REMOVE STREAMLIT DEFAULT STYLE ------------------
 st.markdown("""
 <style>
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+html, body, [class*="css"]  {
+    font-family: 'Inter', sans-serif;
 }
 
-.hero {
+.hero-section {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    padding: 80px 20px;
     text-align: center;
-    padding: 3rem 1rem;
+    color: white;
+    border-radius: 0 0 40px 40px;
 }
 
-.hero h1 {
-    font-size: 48px;
+.hero-section h1 {
+    font-size: 56px;
     font-weight: 800;
-    background: linear-gradient(90deg, #2563eb, #1e40af);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
 }
 
-.hero p {
+.hero-section p {
     font-size: 20px;
-    color: #475569;
-    margin-top: 1rem;
+    opacity: 0.9;
 }
 
-.feature-card {
-    background-color: #f8fafc;
+.card {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0px 10px 40px rgba(0,0,0,0.08);
+}
+
+.metric-box {
+    background: #f1f5f9;
     padding: 20px;
     border-radius: 12px;
     text-align: center;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
+    font-weight: 600;
 }
 
 .stButton>button {
     background: linear-gradient(90deg,#2563eb,#1e40af);
     color: white;
-    border-radius: 10px;
+    border-radius: 12px;
     height: 3em;
     font-weight: 600;
+    width: 100%;
 }
 
 .stDownloadButton>button {
-    background-color: #10b981;
+    background: #10b981;
     color: white;
-    border-radius: 10px;
+    border-radius: 12px;
     font-weight: 600;
+    width: 100%;
 }
 
-footer {
+textarea {
+    border-radius: 12px !important;
+}
+
+.footer-custom {
     text-align: center;
-    margin-top: 3rem;
+    margin-top: 80px;
     color: gray;
     font-size: 14px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------
-# HERO SECTION
-# ----------------------------
+# ------------------ HERO ------------------
 st.markdown("""
-<div class="hero">
-    <h1>Optimize Your Resume. Get More Interviews.</h1>
-    <p>AI-powered ATS optimization designed to increase your hiring success.</p>
+<div class="hero-section">
+    <h1>Land Interviews Faster</h1>
+    <p>CVEdge uses AI to optimize your resume for ATS systems and hiring managers.</p>
 </div>
 """, unsafe_allow_html=True)
 
-st.divider()
+st.write("")
+st.write("")
 
-# ----------------------------
-# FEATURE CARDS
-# ----------------------------
-col1, col2, col3 = st.columns(3)
+# ------------------ MAIN CARD ------------------
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
+col1, col2 = st.columns([1,1])
 
 with col1:
-    st.markdown('<div class="feature-card"><h3>⚡ Instant Optimization</h3><p>Rewrite your resume in seconds.</p></div>', unsafe_allow_html=True)
+    st.subheader("Paste Your Resume")
+    resume_input = st.text_area("", height=350)
+    optimize = st.button("Optimize Resume")
 
 with col2:
-    st.markdown('<div class="feature-card"><h3>🎯 ATS Ready</h3><p>Improve keyword matching & structure.</p></div>', unsafe_allow_html=True)
-
-with col3:
-    st.markdown('<div class="feature-card"><h3>📄 PDF Export</h3><p>Download professionally formatted resumes.</p></div>', unsafe_allow_html=True)
-
-st.divider()
-
-# ----------------------------
-# MAIN APP SECTION
-# ----------------------------
-left, right = st.columns([1, 1])
-
-with left:
-    st.subheader("Paste Your Resume")
-    resume_input = st.text_area(
-        "",
-        height=300,
-        placeholder="Paste your resume here..."
-    )
-    optimize_button = st.button("Optimize Resume")
-
-with right:
-    if optimize_button and resume_input.strip() != "":
-        with st.spinner("AI is optimizing your resume..."):
+    if optimize and resume_input.strip():
+        with st.spinner("Optimizing with AI..."):
 
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a professional resume optimizer. Improve resumes for ATS compatibility, clarity, measurable achievements, and strong action verbs."
-                    },
-                    {
-                        "role": "user",
-                        "content": resume_input
-                    }
+                    {"role": "system", "content": "Optimize this resume for ATS, clarity, measurable results, and professional tone."},
+                    {"role": "user", "content": resume_input}
                 ]
             )
 
             optimized_text = response.choices[0].message.content
 
-        st.success("Optimization Complete!")
+        score = random.randint(85, 97)
 
-        # Simulated Resume Score
-        score = random.randint(82, 96)
-        st.metric("Resume Score", f"{score}%")
+        st.markdown(f"""
+        <div class="metric-box">
+            Resume Strength Score: {score}%
+        </div>
+        """, unsafe_allow_html=True)
 
+        st.write("")
         st.subheader("Optimized Resume")
-        st.text_area("", optimized_text, height=300)
+        st.text_area("", optimized_text, height=350)
 
         # PDF
         buffer = BytesIO()
@@ -180,25 +160,18 @@ with right:
         buffer.seek(0)
 
         st.download_button(
-            label="Download PDF",
-            data=buffer,
-            file_name="CVEdge_Optimized_Resume.pdf",
-            mime="application/pdf"
+            "Download Optimized PDF",
+            buffer,
+            "CVEdge_Optimized_Resume.pdf",
+            "application/pdf"
         )
 
-st.divider()
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------------------
-# FOOTER
-# ----------------------------
-current_year = datetime.now().year
-
-st.markdown(
-    f"""
-    <footer>
-        © {current_year} CVEdge. All rights reserved.<br>
-        Built with Streamlit + OpenAI
-    </footer>
-    """,
-    unsafe_allow_html=True
-)
+# ------------------ FOOTER ------------------
+year = datetime.now().year
+st.markdown(f"""
+<div class="footer-custom">
+© {year} CVEdge. All rights reserved.
+</div>
+""", unsafe_allow_html=True)
